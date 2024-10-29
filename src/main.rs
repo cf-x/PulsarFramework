@@ -1,8 +1,9 @@
-use PulsarFramework::{Pulse, Result};
+use PulsarFramework::{Pulse};
 
 fn main() {
-    Pulse::launch(3000);
-    Pulse::get("/", |_| {
-        (Result::String("hello, world"), 200)
-    })
+    let mut server = Pulse::new(3000);
+    server.launch();
+    server.get("/", |_| {
+        ("hello, world".to_string(), 200)
+    });
 }
