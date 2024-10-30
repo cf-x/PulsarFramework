@@ -5,9 +5,7 @@ TODO: OAuth, JWT, MFA, RBAC mechanisms
 TODO: Cookies (HttpOnly, Secure, SameSite flags)
 TODO: Session expiration and invalidation
 TODO: HTTPS and data encryption
-TODO: .env secret loading
 TODO: file type and size validation
-TODO: update Routing
 TODO: middleware (requests, responses, logging, authentication, E handling...)
 TODO: ORM support
 TODO: RESTful and GraphQL serialization and versioning
@@ -23,16 +21,15 @@ use pulsar_web::Pulse;
 
 fn main() {
     let mut server = Pulse::new(3000);
+    server.load_env(".env");
+
     server.get("/", |req, res| {
         res.body("hello world!");
         res.clone()
     });
     server.get("/user/<name>", |req, res| {
-        res.body(format!("hello {}!", req.route.slugs.get("name").unwrap_or(&String::from("anon"))).as_str());
-        res.clone()
-    });
-    server.get("/user", |req, res| {
-        res.body("hello user");
+        let body = format!("hello {}!", req.route.slugs.get("name").unwrap().as_str());
+        res.body(body);
         res.clone()
     });
     server.launch();

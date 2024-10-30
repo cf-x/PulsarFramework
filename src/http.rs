@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use crate::{Pulse, Request, Route};
+use crate::env::load_file;
 
 #[derive(Debug)]
 pub struct Req {
@@ -22,15 +23,24 @@ impl Res {
     pub fn status(&mut self, code: u16) {
         self.status = code;
     }
-    pub fn body(&mut self, body: &str) {
-        self.body = body.to_string();
+    pub fn body<B: Into<String>>(&mut self, body: B) {
+        self.body = body.into();
     }
-    pub fn header(&mut self, key: &str, value: &str) {
+    pub fn header(&mut self, key: &'static str, value: &'static str) {
         self.headers.insert(key.to_string(), value.to_string());
     }
-    pub fn json(&mut self, json: &str) {
+    pub fn json(&mut self, json: &'static str) {
         self.header("Content-Type", "application/json");
         self.body(json);
+    }
+    pub fn html(&mut self, html: &'static str) {
+        self.header("Content-Type", "text/html");
+        self.body(html);
+    }
+    pub fn html_load(&mut self, html: &'static str) {
+        self.header("Content-Type", "text/html");
+        let contents = load_file(html).unwrap();
+        self.body(contents);
     }
 }
 

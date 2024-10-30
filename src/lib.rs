@@ -1,5 +1,6 @@
-mod http;
-mod routes;
+pub mod http;
+pub mod routes;
+pub mod env;
 
 use std::collections::HashMap;
 use std::io::{Read, Write};
@@ -23,9 +24,11 @@ pub struct Pulse {
     pub user_agent: String,
     pub content_type: String,
     pub content_length: usize,
+    pub secrets: HashMap<String, String>,
     routes: Vec<Route>,
     requests: Vec<Box<Request>>,
 }
+
 impl Pulse {
     pub fn new(port: usize) -> Pulse {
         println!("{} {}{}/", "server launched on:".yellow(), "http://127.0.0.1:".green(), port.green());
@@ -38,6 +41,7 @@ impl Pulse {
             url: String::new(),
             user_agent: String::new(),
             content_type: String::new(),
+            secrets: HashMap::new(),
             content_length: 0,
         }
     }
@@ -100,6 +104,7 @@ impl Pulse {
                 for req in self.requests.iter_mut() {
                     let r = req.route.route.clone();
                     if (r == path || match_dynamic(path.clone(), r.clone())) && req.http == self.method {
+                        is_404 = false;
                         if r.contains("<") {
                             let route_segments = r.split("/").collect::<Vec<&str>>();
                             let path_segments = path.split("/").collect::<Vec<&str>>();
@@ -111,7 +116,6 @@ impl Pulse {
                                     slugs.insert(param_name.to_string(), path_segments[j].to_string());
                                 }
                             }
-                            is_404 = false;
                             req.route.slugs = slugs;
                         }
 

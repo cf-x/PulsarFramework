@@ -1,5 +1,11 @@
 # Changelog
 
+### 0.0.4
+
+- added `.env` support
+- added html responses
+- fixed `404 not found` error
+
 ### 0.0.3
 
 - added dynamic routing
