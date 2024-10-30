@@ -103,7 +103,8 @@ impl Pulse {
                 let path = self.path.clone();
                 for req in self.requests.iter_mut() {
                     let r = req.route.route.clone();
-                    if (r == path || match_dynamic(path.clone(), r.clone())) && req.http == self.method {
+                    if (r == path || match_dynamic(path.clone(), r.clone()))
+                        && (req.http == self.method || req.http == "all") {
                         is_404 = false;
                         if r.contains("<") {
                             let route_segments = r.split("/").collect::<Vec<&str>>();

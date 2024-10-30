@@ -27,8 +27,26 @@ impl Res {
         self.body = body.into();
     }
     pub fn header(&mut self, key: &'static str, value: &'static str) {
-        self.headers.insert(key.to_string(), value.to_string());
+        if key == "Set-Cookie" {
+            let mut cookie_value = value.to_string();
+            if !cookie_value.contains("Secure") {
+                cookie_value.push_str("; Secure");
+            }
+            if !cookie_value.contains("HttpOnly") {
+                cookie_value.push_str("; HttpOnly");
+            }
+            if !cookie_value.contains("SameSite") {
+                cookie_value.push_str("; SameSite=Lax");
+            }
+            if !cookie_value.contains("Path") {
+                cookie_value.push_str("; Path=/");
+            }
+            self.headers.insert(key.to_string(), cookie_value);
+        } else {
+            self.headers.insert(key.to_string(), value.to_string());
+        }
     }
+
     pub fn json(&mut self, json: &'static str) {
         self.header("Content-Type", "application/json");
         self.body(json);
@@ -41,6 +59,16 @@ impl Res {
         self.header("Content-Type", "text/html");
         let contents = load_file(html).unwrap();
         self.body(contents);
+    }
+    pub fn file(&mut self, url: &'static str) {
+        let file = load_file(url).unwrap();
+        self.header("Content-Disposition", "inline");
+        self.body(file);
+    }
+    pub fn download(&mut self, url: &'static str) {
+        let file = load_file(url).unwrap();
+        self.header("Content-Disposition", "attachment; filename=\"downloaded_file\"");
+        self.body(file);
     }
 }
 
@@ -78,6 +106,12 @@ impl Pulse {
         F: Fn(&Req, &mut Res) -> Res + Send + 'static,
     {
         Self::method(self, route, closure, "PATCH");
+    }
+    pub fn all<F>(&mut self, route: &'static str, closure: F)
+    where
+        F: Fn(&Req, &mut Res) -> Res + Send + 'static,
+    {
+        Self::method(self, route, closure, "all");
     }
 
     pub fn method<F>(&mut self, route: &'static str, closure: F, method: &'static str)

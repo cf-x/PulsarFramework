@@ -1,5 +1,12 @@
 # Changelog
 
+### 0.0.5
+
+- added `all` for handling any http request method
+- added `file` and `download` response methods
+- updated cookie handling
+- security: `XSS`, `MitM`, `HTTP`, `CSRF` prevention
+
 ### 0.0.4
 
 - added `.env` support

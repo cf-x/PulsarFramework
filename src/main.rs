@@ -1,14 +1,10 @@
 /*
 Security TODOs
-after adding SQL TODO: XSS, SQL Injection, CSRF, prevention
 TODO: OAuth, JWT, MFA, RBAC mechanisms
-TODO: Cookies (HttpOnly, Secure, SameSite flags)
 TODO: Session expiration and invalidation
 TODO: HTTPS and data encryption
 TODO: file type and size validation
-TODO: middleware (requests, responses, logging, authentication, E handling...)
 TODO: ORM support
-TODO: RESTful and GraphQL serialization and versioning
 TODO: Session storage and expiration management
 TODO: environments: dev, prod, test
 TODO: caching, async processing

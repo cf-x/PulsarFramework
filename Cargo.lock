@@ -10,7 +10,7 @@ checksum = "4d2dbfa33f07712c47d3b025cc22f2923784680ce6e2348c7de9732534f14e61"
 
 [[package]]
 name = "pulsar_web"
-version = "0.0.3"
+version = "0.0.5"
 dependencies = [
  "coloredpp",
 ]
