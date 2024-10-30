@@ -1,44 +1,26 @@
+mod http;
+mod routes;
+
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use coloredpp::Colorize;
+use crate::http::{Req, Res};
+use crate::routes::Route;
 
-type Closure = Box<dyn Fn(&Route) -> (String, usize) + Send + 'static>;
+type Closure = Box<dyn Fn(&Req, &mut Res) -> Res + Send + 'static>;
 pub struct Request {
     pub route: Route,
     pub method: Closure,
 }
 
-#[derive(Clone, Debug)]
-pub struct Route {
-    pub path: String,
-    pub route: String,
-    pub routes: Vec<String>,
-    pub slugs: HashMap<String, String>,
-}
-
-impl Route {
-    pub fn parse(path: &str, route: &str) -> Route {
-        Self {
-            path: String::from(path),
-            route: String::from(route),
-            slugs: HashMap::new(),
-            routes: Vec::new(),
-        }
-    }
-    pub fn stringify(&self) -> String {
-        // converts Route to the String
-        String::from(&self.route)
-    }
-}
-
 pub struct Pulse {
-    port: usize,
+    pub port: usize,
+    pub current_method: String,
+    pub current_path: String,
     routes: Vec<Route>,
     requests: Vec<Box<Request>>,
-    current_method: String,
-    current_path: String,
 }
 impl Pulse {
     pub fn new(port: usize) -> Pulse {
@@ -62,9 +44,6 @@ impl Pulse {
         }
     }
 
-    /*
-        Server
-    */
     fn client(&mut self, mut stream: TcpStream) {
         let mut buffer = [0; 1024];
         match stream.read(&mut buffer) {
@@ -72,14 +51,34 @@ impl Pulse {
                 let request = String::from_utf8_lossy(&buffer[..size]).to_string();
                 let method = request.split_whitespace().next().unwrap();
                 let path = request.split_whitespace().nth(1).unwrap_or("");
+                let url = request.split_whitespace().nth(4).unwrap_or("");
+                let _user_agent = request.split("\n")
+                    .nth(2).unwrap_or("")
+                    .split("User-Agent: ")
+                    .nth(1).unwrap_or("").to_string();
                 self.current_method = method.trim().to_string();
                 self.current_path = path.trim().to_string();
                 let mut is_404 = true;
+
                 for req in self.requests.iter() {
                     if req.route.route == self.current_path {
                         is_404 = false;
-                        let (res, _code) = (req.method)(&req.route);
-                        stream.write_all(res.as_bytes()).unwrap();
+                        let pass_req = Req {
+                            method: method.to_string(),
+                            url: url.to_string(),
+                            body: String::new(),
+                            query: HashMap::new(),
+                            headers: HashMap::new(),
+                            route: req.route.clone(),
+                        };
+                        let mut pass_res = Res {
+                            status: 200,
+                            body: String::from("hi"),
+                            headers: HashMap::new(),
+                        };
+
+                        let res = (req.method)(&pass_req, &mut pass_res);
+                        stream.write_all(res.body.as_bytes()).unwrap();
                         break;
                     }
                 }
@@ -94,25 +93,4 @@ impl Pulse {
             }
         }
     }
-
-    /*
-        HTTP Methods
-    */
-    pub fn get<F>(&mut self, route: &'static str, closure: F)
-    where
-        F: Fn(&Route) -> (String, usize) + Send + 'static,
-    {
-        let route = Route {
-            path: String::new(),
-            route: String::from(route),
-            slugs: HashMap::new(),
-            routes: Vec::new(),
-        };
-        self.routes.push(route.clone());
-        self.requests.push(Box::new(Request {
-            route,
-            method: Box::new(closure),
-        }));
-    }
-    // post, put, delete, patch
 }
