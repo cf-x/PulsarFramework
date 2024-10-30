@@ -39,38 +39,38 @@ impl Pulse {
     where
         F: Fn(&Req, &mut Res) -> Res + Send + 'static,
     {
-        Self::method(self, route, closure);
+        Self::method(self, route, closure, "GET");
     }
 
     pub fn post<F>(&mut self, route: &'static str, closure: F)
     where
         F: Fn(&Req, &mut Res) -> Res + Send + 'static,
     {
-        Self::method(self, route, closure);
+        Self::method(self, route, closure, "POST");
     }
 
     pub fn put<F>(&mut self, route: &'static str, closure: F)
     where
         F: Fn(&Req, &mut Res) -> Res + Send + 'static,
     {
-        Self::method(self, route, closure);
+        Self::method(self, route, closure, "PUT");
     }
 
     pub fn delete<F>(&mut self, route: &'static str, closure: F)
     where
         F: Fn(&Req, &mut Res) -> Res + Send + 'static,
     {
-        Self::method(self, route, closure);
+        Self::method(self, route, closure, "DELETE");
     }
 
     pub fn patch<F>(&mut self, route: &'static str, closure: F)
     where
         F: Fn(&Req, &mut Res) -> Res + Send + 'static,
     {
-        Self::method(self, route, closure);
+        Self::method(self, route, closure, "PATCH");
     }
 
-    pub fn method<F>(&mut self, route: &'static str, closure: F)
+    pub fn method<F>(&mut self, route: &'static str, closure: F, method: &'static str)
     where
         F: Fn(&Req, &mut Res) -> Res + Send + 'static,
     {
@@ -85,6 +85,7 @@ impl Pulse {
         self.requests.push(Box::new(Request {
             route,
             method: Box::new(closure),
+            http: method.to_string(),
         }));
     }
 }
