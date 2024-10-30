@@ -4,12 +4,13 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use coloredpp::Colorize;
 
-#[derive(Debug)]
-pub enum ServerResult {
-    String(&'static str),
+type Closure = Box<dyn Fn(&Route) -> (String, usize) + Send + 'static>;
+pub struct Request {
+    pub route: Route,
+    pub method: Closure,
 }
 
-type Closure = dyn FnOnce(&Route) -> (String, usize) + 'static;
+#[derive(Clone, Debug)]
 pub struct Route {
     pub path: String,
     pub route: String,
@@ -19,11 +20,6 @@ pub struct Route {
 
 impl Route {
     pub fn parse(path: &str, route: &str) -> Route {
-        // get slugs and routes from `route`
-        // `/users/34`, `/users/<id>`
-        // slugs: HashMap::from(&["id", "34"])
-        // routes: vec!["users", "34"]
-        // route: "/users/<id>"
         Self {
             path: String::from(path),
             route: String::from(route),
@@ -40,14 +36,17 @@ impl Route {
 pub struct Pulse {
     port: usize,
     routes: Vec<Route>,
+    requests: Vec<Box<Request>>,
     current_method: String,
     current_path: String,
 }
 impl Pulse {
     pub fn new(port: usize) -> Pulse {
+        println!("{} {}{}", "server launched on:".yellow(), "http://127.0.0.1:".green(), port.green());
         Pulse {
             port,
             routes: Vec::new(),
+            requests: Vec::new(),
             current_method: String::new(),
             current_path: String::new(),
         }
@@ -55,8 +54,6 @@ impl Pulse {
     pub fn launch(&mut self) {
         let listener: TcpListener = TcpListener::bind(format!("127.0.0.1:{}", self.port))
             .expect("failed to bind to address");
-        println!("{} {}{}", "server launched on:".yellow(), "http://127.0.0.1:".green(), self.port.green());
-
         for _ in listener.incoming() {
             match listener.accept() {
                 Ok((stream, _)) => self.client(stream),
@@ -77,18 +74,17 @@ impl Pulse {
                 let path = request.split_whitespace().nth(1).unwrap_or("");
                 self.current_method = method.trim().to_string();
                 self.current_path = path.trim().to_string();
-
                 let mut is_404 = true;
-                for route in &self.routes {
-                    if route.path == self.current_path {
+                for req in self.requests.iter() {
+                    if req.route.route == self.current_path {
                         is_404 = false;
-                        let response = format!("{}: {}", route.path, "Hello, World!");
-                        stream.write_all(response.as_bytes()).unwrap();
+                        let (res, _code) = (req.method)(&req.route);
+                        stream.write_all(res.as_bytes()).unwrap();
                         break;
                     }
                 }
 
-                if !is_404 {
+                if is_404 {
                     let response = "404 Not Found";
                     stream.write_all(response.as_bytes()).unwrap();
                 }
@@ -100,31 +96,23 @@ impl Pulse {
     }
 
     /*
-        Methods
+        HTTP Methods
     */
-
-    /// `get` method
-    pub fn get<F>(&mut self, route: &'static str, _closure: F)
+    pub fn get<F>(&mut self, route: &'static str, closure: F)
     where
-        F: FnOnce(&Route) -> (String, usize) + 'static,
+        F: Fn(&Route) -> (String, usize) + Send + 'static,
     {
-        let route = Route::parse("", route);
-        self.routes.push(route);
+        let route = Route {
+            path: String::new(),
+            route: String::from(route),
+            slugs: HashMap::new(),
+            routes: Vec::new(),
+        };
+        self.routes.push(route.clone());
+        self.requests.push(Box::new(Request {
+            route,
+            method: Box::new(closure),
+        }));
     }
-    // pub fn post<F>(&self, route: &'static str, closure: F)
-    // where
-    //     F: Fn(Option<Route>) -> (ServerResult, String) + 'static,
-    // {}
-    // pub fn put<F>(&self, route: &'static str, closure: F)
-    // where
-    //     F: Fn(Option<Route>) -> (ServerResult, String) + 'static,
-    // {}
-    // pub fn delete<F>(&self, route: &'static str, closure: F)
-    // where
-    //     F: Fn(Option<Route>) -> (ServerResult, String) + 'static,
-    // {}
-    // pub fn patch<F>(&self, route: &'static str, closure: F)
-    // where
-    //     F: Fn(Option<Route>) -> (ServerResult, String) + 'static,
-    // {}
+    // post, put, delete, patch
 }
