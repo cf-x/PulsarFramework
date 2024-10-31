@@ -1,5 +1,11 @@
 # Changelog
 
+### 0.1.0
+
+- added asynchronicity 
+- returning response in methods is no longer required
+- 
+
 ### 0.0.5
 
 - added `all` for handling any http request method

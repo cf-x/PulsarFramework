@@ -1,16 +1,38 @@
 # PulsarFramework
 
-Fast and reliable web framework (under the heavy development)
+Fast and reliable web framework
 
 ```rust
-use pulsar_web::Pulse;
+use pulsar_web::{Pulse, pulsar};
 
-fn main() {
-    let mut server = Pulse::new(3000);
-    server.get("/", |req, res| {
+async fn server(mut server: Pulse) {
+    server.get("/", |_, res| {
         res.body("hello world!");
-        res.clone()
-    });
-    server.launch();
+    }).await;
+
+    server.launch(3000).await;
 }
+pulsar!(server);
 ```
+
+## Installation
+
+```bash
+cargo add pulsar_web
+```
+
+## Features
+
+- robust routing and http method handling
+- built-in security mechanisms
+- easy to write and read
+- asynchronous by default
+
+
+  incomplete/todo:
+
+
+- caching & optimisations
+- HTTPS and data encryption
+- i18n
+- testing

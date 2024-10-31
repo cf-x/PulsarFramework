@@ -8,8 +8,19 @@ use std::net::{TcpListener, TcpStream};
 use coloredpp::Colorize;
 use crate::http::{Req, Res};
 use crate::routes::{match_dynamic, parse_params, Route};
+pub use async_std::task;
 
-type Closure = Box<dyn Fn(&Req, &mut Res) -> Res + Send + 'static>;
+#[macro_export]
+macro_rules! pulsar {
+    ($server:ident) => {
+        fn main() {
+            let mut pulsar = Pulse::new();
+            $crate::task::block_on($server(pulsar));
+        }
+    };
+}
+
+type Closure = Box<dyn Fn(&Req, &mut Res)>;
 pub struct Request {
     pub route: Route,
     pub method: Closure,
@@ -17,7 +28,7 @@ pub struct Request {
 }
 
 pub struct Pulse {
-    pub port: usize,
+    pub port: u16,
     pub method: String,
     pub path: String,
     pub url: String,
@@ -30,10 +41,9 @@ pub struct Pulse {
 }
 
 impl Pulse {
-    pub fn new(port: usize) -> Pulse {
-        println!("{} {}{}/", "server launched on:".yellow(), "http://127.0.0.1:".green(), port.green());
+    pub fn new() -> Pulse {
         Pulse {
-            port,
+            port: 3000,
             routes: Vec::new(),
             requests: Vec::new(),
             method: String::new(),
@@ -45,9 +55,11 @@ impl Pulse {
             content_length: 0,
         }
     }
-    pub fn launch(&mut self) {
-        let listener: TcpListener = TcpListener::bind(format!("127.0.0.1:{}", self.port))
+    pub async fn launch(&mut self, port: u16) {
+        println!("{} {}{}/", "server launched on:".yellow(), "http://127.0.0.1:".green(), port.green());
+        let listener: TcpListener = TcpListener::bind(format!("127.0.0.1:{}", port))
             .expect("failed to bind to address");
+        self.port = port;
         for _ in listener.incoming() {
             match listener.accept() {
                 Ok((stream, _)) => self.client(stream),
@@ -128,13 +140,14 @@ impl Pulse {
                             headers,
                             route: req.route.clone(),
                         };
-                        let mut pass_res = Res {
+                        let mut res = Res {
                             status: 200,
                             body: String::new(),
                             headers: HashMap::new(),
                         };
 
-                        let res = (req.method)(&pass_req, &mut pass_res);
+                        (req.method)(&pass_req, &mut res);
+
                         stream.write_all(res.body.as_bytes()).unwrap();
                         break;
                     }

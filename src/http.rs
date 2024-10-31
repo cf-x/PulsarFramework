@@ -73,50 +73,50 @@ impl Res {
 }
 
 impl Pulse {
-    pub fn get<F>(&mut self, route: &'static str, closure: F)
+    pub async fn get<F>(&mut self, route: &'static str, closure: F)
     where
-        F: Fn(&Req, &mut Res) -> Res + Send + 'static,
+        F: Fn(&Req, &mut Res) + 'static,
     {
-        Self::method(self, route, closure, "GET");
+        Self::method::<F>(self, route, closure, "GET");
     }
 
-    pub fn post<F>(&mut self, route: &'static str, closure: F)
+    pub async fn post<F>(&mut self, route: &'static str, closure: F)
     where
-        F: Fn(&Req, &mut Res) -> Res + Send + 'static,
+        F: Fn(&Req, &mut Res) + 'static,
     {
-        Self::method(self, route, closure, "POST");
+        Self::method::<F>(self, route, closure, "POST");
     }
 
-    pub fn put<F>(&mut self, route: &'static str, closure: F)
+    pub async fn put<F>(&mut self, route: &'static str, closure: F)
     where
-        F: Fn(&Req, &mut Res) -> Res + Send + 'static,
+        F: Fn(&Req, &mut Res) + 'static,
     {
-        Self::method(self, route, closure, "PUT");
+        Self::method::<F>(self, route, closure, "PUT");
     }
 
-    pub fn delete<F>(&mut self, route: &'static str, closure: F)
+    pub async fn delete<F>(&mut self, route: &'static str, closure: F)
     where
-        F: Fn(&Req, &mut Res) -> Res + Send + 'static,
+        F: Fn(&Req, &mut Res) + 'static,
     {
-        Self::method(self, route, closure, "DELETE");
+        Self::method::<F>(self, route, closure, "DELETE");
     }
 
-    pub fn patch<F>(&mut self, route: &'static str, closure: F)
+    pub async fn patch<F>(&mut self, route: &'static str, closure: F)
     where
-        F: Fn(&Req, &mut Res) -> Res + Send + 'static,
+        F: Fn(&Req, &mut Res) + 'static,
     {
-        Self::method(self, route, closure, "PATCH");
+        Self::method::<F>(self, route, closure, "PATCH");
     }
-    pub fn all<F>(&mut self, route: &'static str, closure: F)
+    pub async fn all<F>(&mut self, route: &'static str, closure: F)
     where
-        F: Fn(&Req, &mut Res) -> Res + Send + 'static,
+        F: Fn(&Req, &mut Res) + 'static,
     {
-        Self::method(self, route, closure, "all");
+        Self::method::<F>(self, route, closure, "all");
     }
 
     pub fn method<F>(&mut self, route: &'static str, closure: F, method: &'static str)
     where
-        F: Fn(&Req, &mut Res) -> Res + Send + 'static,
+        F: Fn(&Req, &mut Res) + 'static,
     {
         let route = Route {
             path: String::new(),

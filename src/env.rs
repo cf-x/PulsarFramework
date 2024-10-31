@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fs::read_to_string;
-use std::io::Read;
 use coloredpp::Colorize;
 use crate::Pulse;
 
