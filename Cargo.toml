@@ -1,7 +1,11 @@
 [package]
 name = "pulsar_web"
-version = "0.1.0"
+description = "fast and reliable web framework"
+license = "Unlicense"
+license-file = "LICENSE"
+version = "0.1.1"
 edition = "2021"
+exclude = ["src/main.rs"]
 
 [dependencies]
 async-std = "1.13.0"

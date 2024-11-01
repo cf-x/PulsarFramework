@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use coloredpp::Colorize;
 use crate::{Pulse, Request, Route};
 use crate::env::load_file;
 
@@ -23,11 +24,15 @@ impl Res {
     pub fn status(&mut self, code: u16) {
         self.status = code;
     }
-    pub fn body<B: Into<String>>(&mut self, body: B) {
+    pub fn data<B: Into<String>>(&mut self, body: B) {
         self.body = body.into();
     }
-    pub fn header(&mut self, key: &'static str, value: &'static str) {
-        if key == "Set-Cookie" {
+    pub fn header<K, V>(&mut self, key: K, value: V)
+    where
+        K: AsRef<str> + ToString,
+        V: AsRef<str> + ToString,
+    {
+        if key.as_ref() == "Set-Cookie" {
             let mut cookie_value = value.to_string();
             if !cookie_value.contains("Secure") {
                 cookie_value.push_str("; Secure");
@@ -41,34 +46,93 @@ impl Res {
             if !cookie_value.contains("Path") {
                 cookie_value.push_str("; Path=/");
             }
-            self.headers.insert(key.to_string(), cookie_value);
+            if !cookie_value.contains("Max-Age") {
+                cookie_value.push_str("; Max-Age=86400");
+            }
+            if !cookie_value.contains("X-Content-Type-Options") {
+                cookie_value.push_str("; nosniff");
+            }
+            self.headers.insert(key.to_string(), cookie_value.to_string());
         } else {
             self.headers.insert(key.to_string(), value.to_string());
         }
     }
-
+    pub fn format(&mut self, format: &'static str) {
+        match format {
+            "json" |
+            "javascript" |
+            "xml" |
+            "octet-stream" |
+            "x-www-form-urlencoded" |
+            "pdf" |
+            "zip" |
+            "vnd.api+json" |
+            "vnd.ms-excel" |
+            "vnd.openxmlformats-officedocument.spreadsheetml.sheet" |
+            "vnd.ms-powerpoint" |
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation" => {
+                let value = format!("application/{}", format);
+                self.header("Content-Type", &value);
+            }
+            "html" | "css" | "text" | "plain" => {
+                let value = format!("text/{}", format);
+                self.header("Content-Type", &value);
+            }
+            "jpeg" | "png" | "gif" | "svg+xml" | "webp" => {
+                let value = format!("image/{}", format);
+                self.header("Content-Type", &value);
+            }
+            "mpeg" | "wav" => {
+                let value = format!("audio/{}", format);
+                self.header("Content-Type", &value);
+            }
+            "mp4" | "x-msvideo" | "x-matroska" | "ogg" => {
+                let value = format!("video/{}", format);
+                self.header("Content-Type", &value);
+            }
+            "form-data" | "alternative" | "mixed" => {
+                let value = format!("multipart/{}", format);
+                self.header("Content-Type", &value);
+            }
+            "woff" | "woff2" | "ttf" => {
+                let value = format!("font/{}", format);
+                self.header("Content-Type", &value);
+            }
+            "file" => {
+                self.header("Content-Disposition", "inline");
+                self.header("Content-Type", "application/x-www-form-urlencoded");
+            }
+            "download" => {
+                self.header("Content-Disposition", "attachment; filename=\"downloaded_file\"");
+                self.header("Content-Type", "application/x-www-form-urlencoded");
+            }
+            _ => {
+                eprintln!("{} {}", "Unsupported format:".red(), format.yellow());
+            }
+        }
+    }
     pub fn json(&mut self, json: &'static str) {
         self.header("Content-Type", "application/json");
-        self.body(json);
+        self.data(json);
     }
     pub fn html(&mut self, html: &'static str) {
         self.header("Content-Type", "text/html");
-        self.body(html);
+        self.data(html);
     }
     pub fn html_load(&mut self, html: &'static str) {
         self.header("Content-Type", "text/html");
         let contents = load_file(html).unwrap();
-        self.body(contents);
+        self.data(contents);
     }
     pub fn file(&mut self, url: &'static str) {
         let file = load_file(url).unwrap();
         self.header("Content-Disposition", "inline");
-        self.body(file);
+        self.data(file);
     }
     pub fn download(&mut self, url: &'static str) {
         let file = load_file(url).unwrap();
         self.header("Content-Disposition", "attachment; filename=\"downloaded_file\"");
-        self.body(file);
+        self.data(file);
     }
 }
 
@@ -107,6 +171,7 @@ impl Pulse {
     {
         Self::method::<F>(self, route, closure, "PATCH");
     }
+
     pub async fn all<F>(&mut self, route: &'static str, closure: F)
     where
         F: Fn(&Req, &mut Res) + 'static,

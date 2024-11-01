@@ -1,10 +1,16 @@
 # Changelog
 
+### 0.1.1
+
+- changed `res.body` to `res.data`
+- added `res.format` for setting content-type
+- updated security policy
+- fixed headers not applying to the response
+
 ### 0.1.0
 
 - added asynchronicity 
 - returning response in methods is no longer required
-- 
 
 ### 0.0.5
 

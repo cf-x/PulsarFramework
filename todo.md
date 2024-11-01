@@ -11,17 +11,6 @@ async fn server(mut server: Pulse) {
 }
 ```
 
-- new res API
-
-```rust 
-async fn server(mut server: Pulse) {
-    server.get("/", |_, res| {
-        res.data("hello world!");
-        res.format("plain"); // json, html, static...
-    }).await;
-}
-```
-
 - new req API
 
 ```rust 

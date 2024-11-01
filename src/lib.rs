@@ -10,6 +10,14 @@ use crate::http::{Req, Res};
 use crate::routes::{match_dynamic, parse_params, Route};
 pub use async_std::task;
 
+/// wraps `server` function in the asynchronous `main` function.
+///
+/// ### Example
+///
+/// ```text
+///async fn server(mut server: Pulse) {...}
+///pulsar!(server);
+/// ```
 #[macro_export]
 macro_rules! pulsar {
     ($server:ident) => {
@@ -20,7 +28,10 @@ macro_rules! pulsar {
     };
 }
 
+/// closure argument type for http method
 type Closure = Box<dyn Fn(&Req, &mut Res)>;
+
+/// type of `req` in the http method closure argument
 pub struct Request {
     pub route: Route,
     pub method: Closure,
@@ -43,6 +54,7 @@ pub struct Pulse {
 impl Pulse {
     pub fn new() -> Pulse {
         Pulse {
+            // default port: 3000
             port: 3000,
             routes: Vec::new(),
             requests: Vec::new(),
@@ -55,6 +67,8 @@ impl Pulse {
             content_length: 0,
         }
     }
+
+    /// launch the server on the localhost argument port
     pub async fn launch(&mut self, port: u16) {
         println!("{} {}{}/", "server launched on:".yellow(), "http://127.0.0.1:".green(), port.green());
         let listener: TcpListener = TcpListener::bind(format!("127.0.0.1:{}", port))
@@ -77,6 +91,7 @@ impl Pulse {
                 let mut content_length = 0;
                 let mut headers = HashMap::new();
 
+                // parse data from the request
                 for line in request.split('\n') {
                     if line.starts_with("GET") || line.starts_with("POST") || line.starts_with("PUT") || line.starts_with("DELETE") || line.starts_with("PATCH") {
                         self.method = String::from(line.split_whitespace().nth(0).unwrap_or(""));
@@ -113,10 +128,13 @@ impl Pulse {
 
                 let mut is_404 = true;
                 let path = self.path.clone();
+
+                // match the handler routes and application route
                 for req in self.requests.iter_mut() {
                     let r = req.route.route.clone();
                     if (r == path || match_dynamic(path.clone(), r.clone()))
                         && (req.http == self.method || req.http == "all") {
+                        // set 404 to false when matching the route to avoid 404 error
                         is_404 = false;
                         if r.contains("<") {
                             let route_segments = r.split("/").collect::<Vec<&str>>();
@@ -132,6 +150,7 @@ impl Pulse {
                             req.route.slugs = slugs;
                         }
 
+                        // passed `req` argument
                         let pass_req = Req {
                             method: self.method.clone(),
                             url: self.url.clone(),
@@ -140,15 +159,24 @@ impl Pulse {
                             headers,
                             route: req.route.clone(),
                         };
+                        // passed `res` argument
                         let mut res = Res {
                             status: 200,
                             body: String::new(),
                             headers: HashMap::new(),
                         };
 
+
+                        // execute the handler body
                         (req.method)(&pass_req, &mut res);
 
-                        stream.write_all(res.body.as_bytes()).unwrap();
+                        // write the response body
+                        let mut response = format!("HTTP/1.1 {} OK\r\n", res.status);
+
+                        &res.headers.iter().for_each(|(k, v)| response.push_str(&format!("{}: {}\r\n", k, v)));
+                        response.push_str("\r\n");
+                        response.push_str(&res.body);
+                        stream.write_all(response.as_bytes()).unwrap();
                         break;
                     }
                 }
