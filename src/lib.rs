@@ -1,14 +1,16 @@
 pub mod http;
 pub mod routes;
 pub mod env;
+pub mod session;
 
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use coloredpp::Colorize;
-use crate::http::{Req, Res};
+use crate::http::{parse_cookies, Req, Res};
 use crate::routes::{match_dynamic, parse_params, Route};
 pub use async_std::task;
+use crate::session::SessionStorage;
 
 /// wraps `server` function in the asynchronous `main` function.
 ///
@@ -47,6 +49,7 @@ pub struct Pulse {
     pub content_type: String,
     pub content_length: usize,
     pub secrets: HashMap<String, String>,
+    pub is_https: bool,
     routes: Vec<Route>,
     requests: Vec<Box<Request>>,
 }
@@ -64,6 +67,7 @@ impl Pulse {
             user_agent: String::new(),
             content_type: String::new(),
             secrets: HashMap::new(),
+            is_https: false,
             content_length: 0,
         }
     }
@@ -71,19 +75,25 @@ impl Pulse {
     /// launch the server on the localhost argument port
     pub async fn launch(&mut self, port: u16) {
         println!("{} {}{}/", "server launched on:".yellow(), "http://127.0.0.1:".green(), port.green());
-        let listener: TcpListener = TcpListener::bind(format!("127.0.0.1:{}", port))
-            .expect("failed to bind to address");
         self.port = port;
+        self.launch_http().await;
+    }
+
+    async fn launch_http(&mut self) {
+        let listener: TcpListener = TcpListener::bind(format!("127.0.0.1:{}", self.port))
+            .expect("failed to bind to address");
+
         for _ in listener.incoming() {
             match listener.accept() {
-                Ok((stream, _)) => self.client(stream),
+                Ok((stream, _)) => self.client(stream, None).await,
                 Err(_) => panic!("{}", "failed to accept".red()),
             }
         }
     }
 
-    fn client(&mut self, mut stream: TcpStream) {
-        let mut buffer = [0; 1024];
+    async fn client(&mut self, mut stream: TcpStream, buffer: Option<&[u8; 1024]>) {
+        let mut buffer = if buffer.is_some() { buffer.unwrap().clone() } else { [0; 1024] };
+
         match stream.read(&mut buffer) {
             Ok(size) => {
                 let request = String::from_utf8_lossy(&buffer[..size]).to_string();
@@ -126,9 +136,10 @@ impl Pulse {
                     }
                 }
 
+                // is unhandled route
                 let mut is_404 = true;
-                let path = self.path.clone();
 
+                let path = self.path.clone();
                 // match the handler routes and application route
                 for req in self.requests.iter_mut() {
                     let r = req.route.route.clone();
@@ -156,6 +167,7 @@ impl Pulse {
                             url: self.url.clone(),
                             body,
                             query: parse_params(path),
+                            cookies: parse_cookies(headers.clone()),
                             headers,
                             route: req.route.clone(),
                         };
@@ -164,8 +176,8 @@ impl Pulse {
                             status: 200,
                             body: String::new(),
                             headers: HashMap::new(),
+                            session: SessionStorage::new(),
                         };
-
 
                         // execute the handler body
                         (req.method)(&pass_req, &mut res);
@@ -173,7 +185,7 @@ impl Pulse {
                         // write the response body
                         let mut response = format!("HTTP/1.1 {} OK\r\n", res.status);
 
-                        &res.headers.iter().for_each(|(k, v)| response.push_str(&format!("{}: {}\r\n", k, v)));
+                        res.headers.iter().for_each(|(k, v)| response.push_str(&format!("{}: {}\r\n", k, v)));
                         response.push_str("\r\n");
                         response.push_str(&res.body);
                         stream.write_all(response.as_bytes()).unwrap();

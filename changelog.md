@@ -1,5 +1,11 @@
 # Changelog
 
+### 0.1.2
+
+- added `req.cookie` for reading requested cookies
+- added session and expiration management tools [in `res.session`]
+
+
 ### 0.1.1
 
 - changed `res.body` to `res.data`
@@ -9,7 +15,7 @@
 
 ### 0.1.0
 
-- added asynchronicity 
+- added asynchronicity
 - returning response in methods is no longer required
 
 ### 0.0.5

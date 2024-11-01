@@ -2,15 +2,33 @@ use std::collections::HashMap;
 use coloredpp::Colorize;
 use crate::{Pulse, Request, Route};
 use crate::env::load_file;
+use crate::session::{SessionStorage};
 
 #[derive(Debug)]
 pub struct Req {
     pub method: String,
     pub url: String,
     pub headers: HashMap<String, String>,
+    pub cookies: HashMap<String, String>,
     pub body: String,
     pub query: HashMap<String, String>,
     pub route: Route,
+}
+
+pub fn parse_cookies(headers: HashMap<String, String>) -> HashMap<String, String> {
+    let mut cookies = HashMap::new();
+    if let Some(cookie_string) = headers.get("Cookie") {
+        for cookie in cookie_string.split(';') {
+            let parts: Vec<&str> = cookie.trim().splitn(2, '=').collect();
+            if parts.len() == 2 {
+                let key = parts[0].to_string();
+                let value = parts[1].to_string();
+                cookies.insert(key, value);
+            }
+        }
+    }
+
+    cookies
 }
 
 #[derive(Debug, Clone)]
@@ -18,6 +36,7 @@ pub struct Res {
     pub status: u16,
     pub body: String,
     pub headers: HashMap<String, String>,
+    pub session: SessionStorage,
 }
 
 impl Res {
