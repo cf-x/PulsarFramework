@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>My Docs</title>
+    <link rel="stylesheet" href="https://unpkg.com/docute@4/dist/docute.css">
+    <style>
+        *::selection {
+            background-color: white;
+            color: black;
+        }
+        body {
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+<div id="docute"></div>
+<script src="https://unpkg.com/docute@4/dist/docute.js"></script>
+<script>
+    new Docute({
+        title: 'Pulsar Framework',
+        nav: [
+            {
+                title: 'Home',
+                link: '/'
+            }, {
+                title: 'Github',
+                link: 'https://github.com/cf-x/PulsarFramework'
+            }],
+        sidebar: [
+            {
+                title: "Core",
+                children: [
+                    {
+                        title: 'installation',
+                        link: '/install'
+                    },
+                    {
+                        title: 'routing',
+                        link: '/routing'
+                    },
+                    {
+                        title: 'http methods',
+                        link: '/methods'
+                    },
+                    {
+                        title: 'results',
+                        link: '/results'
+                    },
+                    {
+                        title: 'cookies',
+                        link: '/cookies'
+                    },
+                    {
+                        title: 'sessions and storage',
+                        link: '/sessions'
+                    },
+                    {
+                        title: 'asynchronicity',
+                        link: '/async'
+                    },
+                    {
+                        title: 'type safety',
+                        link: '/type-safety'
+                    },
+                    {
+                        title: 'security features',
+                        link: '/security'
+                    },
+                    {
+                        title: 'testing',
+                        link: '/testing'
+                    },
+                    {
+                        title: 'configuration',
+                        link: '/configuration'
+                    },
+                    {
+                        title: 'deployment',
+                        link: '/deployment'
+                    }
+                ]
+            }
+
+        ],
+        target: '#docute',
+        layout: 'narrow',
+        cssVariables: {
+            accentColor: "#ffffff",
+            pageBackground: "#000000",
+            headerBackground: "var(--page-background)",
+            headerTextColor: "var(--text-color)",
+            textColor: "hsla(0,0%,100%,0.88)",
+            linkColor: "var(--accent-color)",
+            sidebarWidth: "280px",
+            sidebarBackground: "var(--page-background)",
+            sidebarLinkColor: "var(--text-color)",
+            sidebarLinkActiveColor: "var(--text-color)",
+            sidebarLinkArrowColor: "#999",
+            mainBackground: "var(--page-background)",
+            borderColor: "#3e4147",
+            headerHeight: "55px",
+            codeFont: "SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace",
+            tipColor: "rgb(6, 125, 247)",
+            successColor: "#42b983",
+            warningColor: "#ff9800",
+            dangerColor: "rgb(255, 0, 31)",
+            navLinkColor: "var(--text-color)",
+            navLinkBorderColor: "var(--accent-color)",
+            codeBlockBackground: "#2a2d34",
+            codeBlockTextColor: "white",
+            codeBlockShadowColor: "#ffffff",
+            codeBlockShadowWidth: "0.5px",
+            highlightedLineBackground: "#2a2d34",
+            highlightedLineBorderColor: "#ffa7c4",
+            inlineCodeColor: "#e6e6e6",
+            inlineCodeBackground: "#373c49",
+            loaderPrimaryColor: "hsla(0, 0%, 100%, 0.08)",
+            loaderSecondaryColor: "hsla(0, 0%, 100%, 0.18)",
+            tableHeaderBackground: "var(--border-color)",
+            tableHeaderColor: "#868686",
+            docuteSelectHeight: "38px",
+            searchIconColor: "#999",
+            searchFocusBorderColor: "#999",
+            searchFocusIconColor: "#ccc",
+            searchResultHoverBackground: "#1e2025",
+            contentLinkBorder: "2px solid hsla(0, 0%, 100%, 0.28)",
+            contentLinkHoverBorderColor: "currentColor",
+            searchResultBackground: "#27292f",
+        }
+    })
+</script>
+</body>
+</html>

@@ -10,20 +10,20 @@ pub struct Route {
 }
 
 impl Route {
-    pub fn parse(path: &'static str, route: &'static str) -> Route {
+    pub fn parse(path: String, route: String) -> Route {
         Self {
-            path: String::from(path),
-            route: String::from(route),
-            slugs: parse_slug(path, route),
-            params: parse_params(path.to_string()),
+            path: path.clone(),
+            route: route.clone(),
+            slugs: parse_slug(path.clone(), route),
+            params: parse_params(format!("/{}", path.split("/").last().unwrap())),
             routes: path.split("/").map(String::from).collect(),
         }
     }
 }
 
-pub fn parse_params(query: String) -> HashMap<String, String> {
+pub fn parse_params(path: String) -> HashMap<String, String> {
     let mut params: HashMap<String, String> = HashMap::new();
-    let mut queries = query.split("?");
+    let mut queries = path.split("?");
     for query in queries.nth(1).unwrap_or("").split("&") {
         let key = query.split('=').nth(0).unwrap_or("").trim().to_string();
         let value = query.split('=').nth(1).unwrap_or("").trim().to_string();
@@ -32,7 +32,7 @@ pub fn parse_params(query: String) -> HashMap<String, String> {
     params
 }
 
-pub fn parse_slug(path: &'static str, pattern: &'static str) -> HashMap<String, String> {
+pub fn parse_slug(path: String, pattern: String) -> HashMap<String, String> {
     let mut slugs = HashMap::new();
     for (i, route) in pattern.split("/").enumerate() {
         if route.starts_with("<") && route.ends_with(">") {

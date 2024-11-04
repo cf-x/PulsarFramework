@@ -6,9 +6,10 @@ pub mod session;
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
+use std::sync::Arc;
 use coloredpp::Colorize;
 use crate::http::{parse_cookies, Req, Res};
-use crate::routes::{match_dynamic, parse_params, Route};
+use crate::routes::{match_dynamic, parse_params, parse_slug, Route};
 pub use async_std::task;
 use crate::session::SessionStorage;
 
@@ -80,17 +81,14 @@ impl Pulse {
     }
 
     async fn launch_http(&mut self) {
-        let listener: TcpListener = TcpListener::bind(format!("127.0.0.1:{}", self.port))
-            .expect("failed to bind to address");
+        let listener = Arc::new(TcpListener::bind(format!("127.0.0.1:{}", self.port))
+            .expect("failed to bind to address"));
 
-        for _ in listener.incoming() {
-            match listener.accept() {
-                Ok((stream, _)) => self.client(stream, None).await,
-                Err(_) => panic!("{}", "failed to accept".red()),
-            }
+        loop {
+            let (stream, _) = listener.accept().await.expect("failed to accept");
+            let _ = self.client(stream, None).await;
         }
     }
-
     async fn client(&mut self, mut stream: TcpStream, buffer: Option<&[u8; 1024]>) {
         let mut buffer = if buffer.is_some() { buffer.unwrap().clone() } else { [0; 1024] };
 
@@ -118,9 +116,9 @@ impl Pulse {
                     if line.starts_with("Content-Length:") {
                         content_length = usize::from_str_radix(line.split("Content-Length:").nth(1).unwrap_or("0").trim(), 10).unwrap_or(0);
                     }
-                    if line.starts_with("HOST:") {
+                    if line.starts_with("Host:") {
                         self.url = String::from(line.split_whitespace().nth(1).unwrap_or("").trim());
-                        headers.insert("HOST".to_string(), self.url.clone());
+                        headers.insert("Host".to_string(), self.url.clone());
                     }
                 }
 
@@ -136,71 +134,65 @@ impl Pulse {
                     }
                 }
 
-                // is unhandled route
-                let mut is_404 = true;
-
-                let path = self.path.clone();
-                // match the handler routes and application route
-                for req in self.requests.iter_mut() {
-                    let r = req.route.route.clone();
-                    if (r == path || match_dynamic(path.clone(), r.clone()))
-                        && (req.http == self.method || req.http == "all") {
-                        // set 404 to false when matching the route to avoid 404 error
-                        is_404 = false;
-                        if r.contains("<") {
-                            let route_segments = r.split("/").collect::<Vec<&str>>();
-                            let path_segments = path.split("/").collect::<Vec<&str>>();
-                            let mut slugs = HashMap::new();
-
-                            for (j, segment) in route_segments.iter().enumerate() {
-                                if segment.starts_with("<") && segment.ends_with(">") {
-                                    let param_name = &segment[1..segment.len() - 1]; // Get the parameter name
-                                    slugs.insert(param_name.to_string(), path_segments[j].to_string());
-                                }
-                            }
-                            req.route.slugs = slugs;
-                        }
-
-                        // passed `req` argument
-                        let pass_req = Req {
-                            method: self.method.clone(),
-                            url: self.url.clone(),
-                            body,
-                            query: parse_params(path),
-                            cookies: parse_cookies(headers.clone()),
-                            headers,
-                            route: req.route.clone(),
-                        };
-                        // passed `res` argument
-                        let mut res = Res {
-                            status: 200,
-                            body: String::new(),
-                            headers: HashMap::new(),
-                            session: SessionStorage::new(),
-                        };
-
-                        // execute the handler body
-                        (req.method)(&pass_req, &mut res);
-
-                        // write the response body
-                        let mut response = format!("HTTP/1.1 {} OK\r\n", res.status);
-
-                        res.headers.iter().for_each(|(k, v)| response.push_str(&format!("{}: {}\r\n", k, v)));
-                        response.push_str("\r\n");
-                        response.push_str(&res.body);
-                        stream.write_all(response.as_bytes()).unwrap();
-                        break;
-                    }
-                }
-
-                if is_404 {
-                    let response = "404 Not Found";
-                    stream.write_all(response.as_bytes()).unwrap();
-                }
+                let stream = stream;
+                self.handle_routes(&stream, headers, body);
             }
             Err(e) => {
                 eprintln!("{} {}", "failed to read from connection:".red().bold(), e.red());
             }
+        }
+    }
+
+    fn handle_routes(&mut self, mut stream: &TcpStream, headers: HashMap<String, String>, body: String) {
+        let mut is_404 = true;
+
+        let path = self.path.clone();
+        // match the handler routes and application route
+        for req in self.requests.iter_mut() {
+            let route = req.route.route.clone();
+            if (route.clone() == path.split("?").nth(0).unwrap_or(&path.clone()) || // check if route and path match
+                match_dynamic(path.clone(), route.clone())) && // check if path dynamically matches the route
+                (req.http == self.method || req.http == "all") // check if route and request methods match
+            {
+                // set 404 to false when matching the route to avoid 404 error
+                is_404 = false;
+                req.route.slugs = parse_slug(path.clone(), route.clone());
+                req.route.path = self.url.clone();
+                req.route.params = parse_params(path.clone());
+                // passed `req` argument
+                let pass_req = Req {
+                    method: self.method.clone(),
+                    body,
+                    query: parse_params(path),
+                    cookies: parse_cookies(headers.clone()),
+                    headers,
+                    route: req.route.clone(),
+                };
+                // passed `res` argument
+                let mut res = Res {
+                    status: 200,
+                    body: String::new(),
+                    headers: HashMap::new(),
+                    session: SessionStorage::new(),
+                };
+
+                // execute the handler body
+                (req.method)(&pass_req, &mut res);
+
+                // write the response body
+                let mut response = format!("HTTP/1.1 {} OK\r\n", res.status);
+
+                res.headers.iter().for_each(|(k, v)| response.push_str(&format!("{}: {}\r\n", k, v)));
+                response.push_str("\r\n");
+                response.push_str(&res.body);
+                stream.write_all(response.as_bytes()).unwrap();
+                break;
+            }
+        }
+
+        if is_404 {
+            let response = "404 Not Found";
+            stream.write_all(response.as_bytes()).unwrap();
         }
     }
 }

@@ -3,7 +3,7 @@ name = "pulsar_web"
 description = "fast and reliable web framework"
 license = "Unlicense"
 license-file = "LICENSE"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 exclude = ["src/main.rs"]
 

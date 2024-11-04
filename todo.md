@@ -17,6 +17,7 @@ async fn server(mut server: Pulse) {
 - caching: `POST`, `PUT` & `PATCH` request data caching
 - file validation (size and type)
 - HTTPS support
+- pulsar-cli for watching, initializing and adding features
 
 optional:
 

@@ -1,10 +1,14 @@
 # Changelog
 
+### 0.1.3
+
+- fixed: route not parsing url
+- fixed: query and slug parsing
+
 ### 0.1.2
 
 - added `req.cookie` for reading requested cookies
 - added session and expiration management tools [in `res.session`]
-
 
 ### 0.1.1
 

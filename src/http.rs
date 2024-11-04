@@ -7,7 +7,6 @@ use crate::session::{SessionStorage};
 #[derive(Debug)]
 pub struct Req {
     pub method: String,
-    pub url: String,
     pub headers: HashMap<String, String>,
     pub cookies: HashMap<String, String>,
     pub body: String,
